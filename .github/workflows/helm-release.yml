@@ -5,14 +5,14 @@ on:
     branches:
       - main
     paths:
-      - '**/Chart.yaml'
-      - '**/values.yaml'
-      - '**/templates/**'
+      - "**/Chart.yaml"
+      - "**/values.yaml"
+      - "**/templates/**"
   pull_request:
     paths:
-      - '**/Chart.yaml'
-      - '**/values.yaml'
-      - '**/templates/**'
+      - "**/Chart.yaml"
+      - "**/values.yaml"
+      - "**/templates/**"
 
 env:
   REGISTRY: ghcr.io
@@ -35,7 +35,7 @@ jobs:
       - name: Set up python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
+          python-version: "3.9"
           check-latest: true
 
       - name: Set up chart-testing
@@ -78,6 +78,14 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update Dependencies
+        run: |
+          for chart_yaml in */Chart.yaml; do
+            chart_dir=$(dirname "$chart_yaml")
+            echo "Updating dependencies for $chart_dir"
+            helm dependency update "$chart_dir"
+          done
 
       - name: Package and Push Charts
         run: |

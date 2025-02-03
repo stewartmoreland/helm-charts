@@ -1,0 +1,7 @@
+{
+  "recommendations": [
+    "tetrateio.vscode-helm",
+    "ms-kubernetes-tools.vscode-kubernetes-tools",
+    "redhat.vscode-yaml"
+  ]
+}
