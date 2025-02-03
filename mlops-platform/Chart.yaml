@@ -1,0 +1,52 @@
+apiVersion: v2
+name: mlops-platform
+description: A comprehensive MLOps platform for Kubernetes including Kubeflow, MLflow, Seldon Core, Ray, and JupyterHub
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - mlops
+  - machine-learning
+  - kubeflow
+  - mlflow
+  - seldon
+  - ray
+  - jupyter
+home: https://github.com/stewart/helm-charts/tree/main/mlops-platform
+maintainers:
+  - name: stewart
+    url: https://github.com/stewart
+
+dependencies:
+  - name: kubeflow
+    version: "1.7.0"
+    repository: "https://storage.googleapis.com/kubeflow-helm"
+    condition: kubeflow.enabled
+  - name: mlflow
+    version: "0.7.13"
+    repository: "https://community-charts.github.io/helm-charts"
+    condition: mlflow.enabled
+  - name: seldon-core-operator
+    version: "1.15.1"
+    repository: "https://storage.googleapis.com/seldon-charts"
+    condition: seldon.enabled
+  - name: ray
+    version: "0.7.1"
+    repository: "https://ray-project.github.io/kuberay-helm"
+    condition: ray.enabled
+  - name: jupyterhub
+    version: "3.2.1"
+    repository: "https://jupyterhub.github.io/helm-chart"
+    condition: jupyter.enabled
+  - name: minio
+    version: "5.0.14"
+    repository: "https://charts.min.io"
+    condition: minio.enabled
+  - name: prometheus
+    version: "25.8.0"
+    repository: "https://prometheus-community.github.io/helm-charts"
+    condition: monitoring.enabled
+  - name: grafana
+    version: "7.0.19"
+    repository: "https://grafana.github.io/helm-charts"
+    condition: monitoring.enabled

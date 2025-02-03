@@ -1,0 +1,145 @@
+global:
+  storage:
+    class: ""
+    size: "100Gi"
+  gpu:
+    enabled: false
+    type: "nvidia.com/gpu"
+
+kubeflow:
+  enabled: true
+  pipelines:
+    enabled: true
+    persistence:
+      size: "20Gi"
+  serving:
+    enabled: true
+  training:
+    enabled: true
+
+mlflow:
+  enabled: true
+  tracking:
+    database:
+      type: postgresql
+      host: ""
+      port: 5432
+      database: mlflow
+      user: mlflow
+    s3:
+      enabled: true
+      bucket: mlflow
+  postgresql:
+    enabled: true
+    persistence:
+      size: "10Gi"
+
+seldon:
+  enabled: true
+  usageMetrics:
+    enabled: true
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "2Gi"
+    limits:
+      cpu: "2"
+      memory: "4Gi"
+
+jupyter:
+  enabled: true
+  hub:
+    db:
+      type: sqlite-pvc
+      pvc:
+        storage: "10Gi"
+  singleuser:
+    profileList:
+      - display_name: "Data Science"
+        description: "Python, R, and Julia for data science"
+        default: true
+        kubespawner_override:
+          image: jupyter/datascience-notebook:latest
+      - display_name: "TensorFlow"
+        description: "TensorFlow with GPU support"
+        kubespawner_override:
+          image: jupyter/tensorflow-notebook:latest
+          extra_resource_limits:
+            nvidia.com/gpu: "1"
+
+ray:
+  enabled: true
+  operator:
+    enabled: true
+  cluster:
+    enabled: true
+    workers: 3
+    workerType: "medium"
+    resources:
+      requests:
+        cpu: "1"
+        memory: "4Gi"
+      limits:
+        cpu: "2"
+        memory: "8Gi"
+
+minio:
+  enabled: true
+  persistence:
+    size: "100Gi"
+  resources:
+    requests:
+      memory: "1Gi"
+      cpu: "250m"
+
+monitoring:
+  enabled: true
+  prometheus:
+    enabled: true
+    alertmanager:
+      enabled: true
+    serverFiles:
+      recording_rules.yml:
+        groups:
+          - name: mlops_metrics
+            rules:
+              - record: model_prediction_latency
+                expr: rate(seldon_api_executor_client_requests_seconds_sum[5m])
+  grafana:
+    enabled: true
+    persistence:
+      enabled: true
+      size: "10Gi"
+    dashboards:
+      default:
+        model-monitoring:
+          json: |
+            {
+              "title": "Model Monitoring Dashboard",
+              "uid": "model-monitoring"
+            }
+    datasources:
+      datasources.yaml:
+        apiVersion: 1
+        datasources:
+          - name: Prometheus
+            type: prometheus
+            url: http://{{ .Release.Name }}-prometheus-server
+            access: proxy
+            isDefault: true
+
+modelDrift:
+  enabled: true
+  schedule: "0 * * * *"
+  metrics:
+    - accuracy
+    - latency
+    - throughput
+
+dataQuality:
+  enabled: true
+  schedule: "0 0 * * *"
+  checks:
+    - missing_values
+    - data_drift
+    - schema_validation

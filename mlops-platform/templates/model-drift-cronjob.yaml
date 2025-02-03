@@ -1,0 +1,41 @@
+{{- if .Values.modelDrift.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "mlops-platform.fullname" . }}-model-drift
+  labels:
+    {{- include "mlops-platform.labels" . | nindent 4 }}
+    app.kubernetes.io/component: model-drift
+spec:
+  schedule: {{ .Values.modelDrift.schedule | quote }}
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            {{- include "mlops-platform.selectorLabels" . | nindent 12 }}
+            app.kubernetes.io/component: model-drift
+        spec:
+          containers:
+            - name: model-drift
+              image: "{{ .Values.modelDrift.image.repository }}:{{ .Values.modelDrift.image.tag }}"
+              imagePullPolicy: {{ .Values.modelDrift.image.pullPolicy }}
+              env:
+                - name: MLFLOW_TRACKING_URI
+                  value: http://{{ include "mlops-platform.fullname" . }}-mlflow:5000
+                - name: PROMETHEUS_URL
+                  value: http://{{ include "mlops-platform.fullname" . }}-prometheus-server
+                - name: METRICS
+                  value: {{ join "," .Values.modelDrift.metrics | quote }}
+              resources:
+                {{- toYaml .Values.modelDrift.resources | nindent 16 }}
+              volumeMounts:
+                - name: model-drift-config
+                  mountPath: /etc/model-drift
+                  readOnly: true
+          volumes:
+            - name: model-drift-config
+              configMap:
+                name: {{ include "mlops-platform.fullname" . }}-model-drift-config
+          restartPolicy: OnFailure
+{{- end }} 

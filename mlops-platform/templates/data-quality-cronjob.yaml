@@ -1,0 +1,47 @@
+{{- if .Values.dataQuality.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "mlops-platform.fullname" . }}-data-quality
+  labels:
+    {{- include "mlops-platform.labels" . | nindent 4 }}
+    app.kubernetes.io/component: data-quality
+spec:
+  schedule: {{ .Values.dataQuality.schedule | quote }}
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            {{- include "mlops-platform.selectorLabels" . | nindent 12 }}
+            app.kubernetes.io/component: data-quality
+        spec:
+          containers:
+            - name: data-quality
+              image: "{{ .Values.dataQuality.image.repository }}:{{ .Values.dataQuality.image.tag }}"
+              imagePullPolicy: {{ .Values.dataQuality.image.pullPolicy }}
+              env:
+                - name: MLFLOW_TRACKING_URI
+                  value: http://{{ include "mlops-platform.fullname" . }}-mlflow:5000
+                - name: MINIO_ENDPOINT
+                  value: http://{{ include "mlops-platform.fullname" . }}-minio:9000
+                - name: CHECKS
+                  value: {{ join "," .Values.dataQuality.checks | quote }}
+              resources:
+                {{- toYaml .Values.dataQuality.resources | nindent 16 }}
+              volumeMounts:
+                - name: data-quality-config
+                  mountPath: /etc/data-quality
+                  readOnly: true
+                - name: data-quality-credentials
+                  mountPath: /etc/data-quality/credentials
+                  readOnly: true
+          volumes:
+            - name: data-quality-config
+              configMap:
+                name: {{ include "mlops-platform.fullname" . }}-data-quality-config
+            - name: data-quality-credentials
+              secret:
+                secretName: {{ include "mlops-platform.fullname" . }}-data-quality-credentials
+          restartPolicy: OnFailure
+{{- end }} 

@@ -5,7 +5,12 @@ This repository contains a collection of Helm charts for various applications an
 ## Available Charts
 
 ### [calico-federation](./calico-federation)
+
 Helm chart for setting up Calico federation between Kubernetes clusters.
+
+### [mlops-platform](./mlops-platform)
+
+Helm chart for setting up the MLops Platform.
 
 ## Usage
 
