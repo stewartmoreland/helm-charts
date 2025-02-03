@@ -1,0 +1,98 @@
+name: Release Helm Charts
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '**/Chart.yaml'
+      - '**/values.yaml'
+      - '**/templates/**'
+  pull_request:
+    paths:
+      - '**/Chart.yaml'
+      - '**/values.yaml'
+      - '**/templates/**'
+
+env:
+  REGISTRY: ghcr.io
+  OWNER: ${{ github.repository_owner }}
+
+jobs:
+  lint-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: v3.12.1
+
+      - name: Set up python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+          check-latest: true
+
+      - name: Set up chart-testing
+        uses: helm/chart-testing-action@v2.6.1
+
+      - name: Run chart-testing (list-changed)
+        id: list-changed
+        run: |
+          changed=$(ct list-changed --target-branch ${{ github.event.repository.default_branch }})
+          if [[ -n "$changed" ]]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run chart-testing (lint)
+        if: steps.list-changed.outputs.changed == 'true'
+        run: ct lint --target-branch ${{ github.event.repository.default_branch }}
+
+  release:
+    needs: lint-test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: v3.12.1
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Package and Push Charts
+        run: |
+          for chart in */Chart.yaml; do
+            if [ -f "$chart" ]; then
+              chart_dir=$(dirname "$chart")
+              chart_name=$(yq eval '.name' "$chart")
+              chart_version=$(yq eval '.version' "$chart")
+              
+              echo "Processing chart: $chart_name"
+              
+              # Package the chart
+              helm package "$chart_dir"
+              
+              # Push to GHCR
+              helm push "${chart_name}-${chart_version}.tgz" "oci://${REGISTRY}/${OWNER}"
+            fi
+          done

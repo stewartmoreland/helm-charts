@@ -9,11 +9,23 @@ Helm chart for setting up Calico federation between Kubernetes clusters.
 
 ## Usage
 
-Each chart is documented in its respective directory. To use any of the charts from this repository:
+The charts are available both via GitHub Container Registry (GHCR) and GitHub Pages. Choose your preferred installation method:
+
+### Install via GHCR (Recommended)
+
+```bash
+# Pull the chart
+helm pull oci://ghcr.io/stewartmoreland/<chart-name> --version <version>
+
+# Install the chart
+helm install my-release oci://ghcr.io/stewartmoreland/<chart-name> --version <version>
+```
+
+### Install via GitHub Pages
 
 1. Add the repository:
    ```bash
-   helm repo add stewart-charts https://raw.githubusercontent.com/USERNAME/helm-charts/main/
+   helm repo add stewart-charts https://raw.githubusercontent.com/stewartmoreland/helm-charts/main/
    ```
 
 2. Update your local repository cache:
