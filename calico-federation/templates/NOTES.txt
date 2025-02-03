@@ -1,0 +1,80 @@
+Thank you for installing {{ .Chart.Name }}.
+
+IMPORTANT CONFIGURATION NOTES:
+----------------------------------
+This installation configures Calico Enterprise federation between clusters.
+
+Prerequisites:
+-------------
+1. Calico Enterprise must be installed on both clusters
+2. UDP port {{ .Values.remoteClusterConfiguration.vxlan.port }} (VXLAN) must be open between clusters
+3. MTU is properly configured (current setting: {{ .Values.remoteClusterConfiguration.vxlan.mtu }})
+4. Pod CIDR ranges must not overlap between clusters
+5. Service CIDR ranges must not overlap between clusters
+{{- if .Values.remoteClusterConfiguration.ipPools.enabled }}
+6. For AWS clusters: Ensure VPC peering is configured between clusters
+   - outgoingNATDisabled is set to {{ .Values.remoteClusterConfiguration.ipPools.outgoingNATDisabled }}
+   - AWS VPC CIDR: {{ .Values.remoteClusterConfiguration.ipPools.cidr }}
+{{- end }}
+
+Federation Setup Steps:
+---------------------
+1. Create and retrieve the service account token:
+
+   # Get the token and certificate:
+   TOKEN=$(kubectl get secret tigera-federation-remote-cluster -n kube-system -o jsonpath='{.data.token}')
+   CA_CERT=$(kubectl get secret tigera-federation-remote-cluster -n kube-system -o jsonpath='{.data.ca\.crt}')
+   API_SERVER=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}')
+
+2. Create the federation secret in the peer cluster:
+
+   kubectl apply -f - <<EOF
+   apiVersion: v1
+   kind: Secret
+   metadata:
+     name: {{ .Values.peerCluster.secretName }}
+     namespace: {{ .Values.peerCluster.namespace }}
+   type: Opaque
+   data:
+     kubeconfig: $(cat <<EOT | base64 -w 0
+   apiVersion: v1
+   kind: Config
+   clusters:
+   - name: {{ .Values.clusterName }}
+     cluster:
+       certificate-authority-data: ${CA_CERT}
+       server: ${API_SERVER}
+   users:
+   - name: tigera-federation-remote-cluster
+     user:
+       token: ${TOKEN}
+   contexts:
+   - name: federation-context
+     context:
+       cluster: {{ .Values.clusterName }}
+       user: tigera-federation-remote-cluster
+   current-context: federation-context
+   EOT
+   )
+   EOF
+
+Verification Steps:
+-----------------
+1. Verify the secret was created in the peer cluster:
+   kubectl get secret {{ .Values.peerCluster.secretName }} -n {{ .Values.peerCluster.namespace }}
+
+2. Test the kubeconfig:
+   kubectl get secret {{ .Values.peerCluster.secretName }} -n {{ .Values.peerCluster.namespace }} -o jsonpath="{.data.kubeconfig}" | base64 -d > verify_kubeconfig.yaml
+   kubectl --kubeconfig=verify_kubeconfig.yaml get nodes
+
+3. Check RemoteClusterConfiguration status:
+   kubectl get remoteclusterconfiguration
+   kubectl logs deployment/calico-typha -n calico-system | grep "Sending in-sync update"
+
+4. Verify Typha permissions:
+   kubectl auth can-i list secrets --namespace {{ .Values.peerCluster.namespace }} --as=system:serviceaccount:calico-system:calico-typha
+
+5. Test cross-cluster connectivity:
+   - Verify endpoints include IPs from both clusters
+   - Test pod-to-pod communication across clusters
+   - Check Typha logs for successful connection

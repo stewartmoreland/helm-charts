@@ -1,0 +1,47 @@
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: "tigera-federation"
+
+# Calico Enterprise Federation Configuration
+clusterName: "cluster1"  # Name of this cluster
+peerCluster:
+  name: "cluster2"       # Name of the peer cluster
+  apiServer: ""         # API server URL of the peer cluster
+  secretName: "remote-cluster-secret"  # Name of the secret containing peer cluster credentials
+  namespace: "calico-system"  # Namespace for the secret
+
+# Remote Cluster Configuration
+remoteClusterConfiguration:
+  enabled: true
+  # Specify which Calico Enterprise features to federate
+  features:
+    - globalAlerts
+    - globalReports
+    - globalAlertTemplates
+    - hostEndpoints
+    - networkSets
+    - globalNetworkSets
+    - licenseKeys
+  
+  # Overlay Networking Configuration
+  vxlan:
+    enabled: true
+    mode: CrossSubnet    # Options: Always, CrossSubnet
+    port: 4789          # Standard VXLAN port
+    vni: 4096           # VXLAN Network Identifier
+    mtu: 1450          # Recommended MTU for VXLAN
+  
+  # Sync Options
+  syncOptions:
+    overlayRoutingMode: Enabled  # Enable VXLAN overlay routing
+
+  # IP Pool Configuration for AWS VPC (if using AWS clusters)
+  ipPools:
+    enabled: false
+    outgoingNATDisabled: true   # Disable SNAT for traffic to AWS cluster
+    cidr: ""                    # CIDR for AWS cluster VPC

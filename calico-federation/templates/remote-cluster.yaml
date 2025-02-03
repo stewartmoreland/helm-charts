@@ -1,0 +1,26 @@
+{{- if .Values.remoteClusterConfiguration.enabled }}
+apiVersion: projectcalico.org/v3
+kind: RemoteClusterConfiguration
+metadata:
+  name: {{ .Values.peerCluster.name }}
+spec:
+  clusterAccessSecret:
+    name: {{ .Values.peerCluster.secretName }}
+    namespace: calico-system
+    kind: Secret
+  {{- if .Values.peerCluster.apiServer }}
+  apiServer: {{ .Values.peerCluster.apiServer }}
+  {{- end }}
+  syncOptions:
+    overlayRoutingMode: {{ if .Values.remoteClusterConfiguration.vxlan.enabled }}Enabled{{ else }}Disabled{{ end }}
+  features:
+  {{- range .Values.remoteClusterConfiguration.features }}
+    - {{ . }}
+  {{- end }}
+  {{- if .Values.remoteClusterConfiguration.vxlan.enabled }}
+  vxlanMode: {{ .Values.remoteClusterConfiguration.vxlan.mode }}
+  vxlanPort: {{ .Values.remoteClusterConfiguration.vxlan.port }}
+  vxlanVNI: {{ .Values.remoteClusterConfiguration.vxlan.vni }}
+  mtu: {{ .Values.remoteClusterConfiguration.vxlan.mtu }}
+  {{- end }}
+{{- end }}
